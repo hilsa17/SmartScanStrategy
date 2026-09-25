@@ -60,3 +60,30 @@ class BusyPredictor:
             X[i, idx, B + looks] = 1.0
             Y[i] = m[start + W]                                # answer = which bands were busy next
         return torch.from_numpy(X), torch.from_numpy(Y)
+    def pretrain(self, maps, steps=2000, batch=128, seed=0):
+        rng = np.random.default_rng(seed)
+        opt = torch.optim.Adam(self.model.parameters(), lr=2e-3)
+        loss_fn = nn.BCEWithLogitsLoss()
+        self.model.train()
+        for k in range(steps):
+            X, Y = self._make_batch(maps, batch, rng)
+            opt.zero_grad()
+            loss = loss_fn(self.model(X), Y)
+            loss.backward()
+            opt.step()
+            if (k + 1) % 500 == 0:
+                print(f"[predictor] step {k+1}/{steps}  loss = {loss.item():.4f}")
+        self.model.eval()
+
+    @torch.no_grad()
+    def predict(self, history):                # history shape: [window, 2*n_bands]
+        x = torch.from_numpy(history).unsqueeze(0)
+        return torch.sigmoid(self.model(x)).squeeze(0).numpy().astype(np.float32)
+
+    @torch.no_grad()
+    def accuracy(self, maps, n=2000, seed=123):
+        """% correct predictions: is the band the predictor likes best really busy next slot?
+        Also returns the score of a random guess for comparison."""
+        X, Y = self._make_batch(maps, n, np.random.default_rng(seed))
+        best_band = torch.sigmoid(self.model(X)).argmax(1)
+        return float(Y[torch.arange(n), best_band].mean()), float(Y.mean())
