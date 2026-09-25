@@ -75,3 +75,52 @@ class UCB1:
         self.counts[band] += 1
         self.values[band] += (reward - self.values[band]) / self.counts[band]
 
+
+class DiscountedUCB:
+    """Same as UCB1 but old results slowly fade (multiplied by gamma every slot),
+    so the agent follows a signal that moves around."""
+    def __init__(self, n_bands, c=2.0, gamma=0.98, **_):
+        self.n, self.c, self.gamma = n_bands, c, gamma
+        self.counts = np.zeros(n_bands)     # faded count of looks
+        self.sums = np.zeros(n_bands)       # faded sum of rewards
+
+    def select(self):
+        untried = np.where(self.counts < 1e-9)[0]
+        if len(untried):
+            return int(untried[0])
+        total = max(self.counts.sum(), 1.0 + 1e-9)
+        average = self.sums / self.counts
+        return int(np.argmax(average + np.sqrt(self.c * math.log(total) / self.counts)))
+
+    def update(self, band, reward):
+        self.counts *= self.gamma
+        self.sums *= self.gamma
+        self.counts[band] += 1
+        self.sums[band] += reward
+
+
+class SlidingWindowUCB:
+    """Same as UCB1 but only the LAST `window` looks are remembered. Everything older is forgotten."""
+    def __init__(self, n_bands, c=2.0, window=50, **_):
+        self.n, self.c, self.window = n_bands, c, window
+        self.recent = deque()               # last `window` (band, reward) pairs
+        self.counts = np.zeros(n_bands)
+        self.sums = np.zeros(n_bands)
+        self.t = 0
+
+    def select(self):
+        self.t += 1
+        untried = np.where(self.counts == 0)[0]
+        if len(untried):                    # a band that was forgotten gets looked at again
+            return int(untried[0])
+        bonus = np.sqrt(self.c * math.log(min(self.t, self.window)) / self.counts)
+        return int(np.argmax(self.sums / self.counts + bonus))
+
+    def update(self, band, reward):
+        self.recent.append((band, reward))
+        self.counts[band] += 1
+        self.sums[band] += reward
+        if len(self.recent) > self.window:  # forget the oldest look
+            old_band, old_reward = self.recent.popleft()
+            self.counts[old_band] -= 1
+            self.sums[old_band] -= old_reward
