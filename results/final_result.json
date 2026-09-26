@@ -1,0 +1,50 @@
+{
+  "status": "finalized_after_dsp_confirmation",
+  "dsp_confirmation": {
+    "confirmed": true,
+    "score": 7.55,
+    "t_scan": 5.0,
+    "hit_count": 4,
+    "dataset": "markov_restless",
+    "reason": "DSP confirmation produced consistent pulse timing and beam matches"
+  },
+  "rl_result": {
+    "dataset": "markov_restless",
+    "algo": "dqn",
+    "best_policy": "DQN",
+    "rows": [
+      {
+        "policy": "DQN",
+        "P_int": 0.06629999999999998,
+        "Pd": 0.9495516416848527,
+        "Pfa": 0.01989778972553181,
+        "TTFI": 53.14,
+        "avg_reward": 0.038934999999999956
+      },
+      {
+        "policy": "sawtooth",
+        "P_int": 0.028699999999999996,
+        "Pd": 0.9814357864357866,
+        "Pfa": 0.01990092309981988,
+        "TTFI": 28.76,
+        "avg_reward": 0.0004000000000000266
+      },
+      {
+        "policy": "uniform_random",
+        "P_int": 0.026800000000000004,
+        "Pd": 0.9283008658008659,
+        "Pfa": 0.019472978723542315,
+        "TTFI": 29.5,
+        "avg_reward": -0.0020149999999999548
+      }
+    ],
+    "dsp_confirmation": {
+      "confirmed": true,
+      "score": 7.55,
+      "t_scan": 5.0,
+      "hit_count": 4,
+      "dataset": "markov_restless",
+      "reason": "DSP confirmation produced consistent pulse timing and beam matches"
+    }
+  }
+}

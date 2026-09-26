@@ -1,0 +1,8 @@
+{
+  "confirmed": true,
+  "score": 7.55,
+  "t_scan": 5.0,
+  "hit_count": 4,
+  "dataset": "markov_restless",
+  "reason": "DSP confirmation produced consistent pulse timing and beam matches"
+}
