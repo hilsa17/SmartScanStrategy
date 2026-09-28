@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ES Scheduler Console — Live (FastAPI)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050806; --panel:#0b120e; --panel2:#0e1712; --line:#1c2b22;
+  --ink:#cdeedd; --dim:#6c8579; --dim2:#3f5348;
+  --green:#33e07f; --green-dim:#1b7a48; --amber:#ffb648; --cyan:#4fd6ff; --red:#ff5e5e;
+  --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box;} body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);}
+.wrap{max-width:1280px;margin:0 auto;padding:20px;}
+header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px;}
+h1{font-size:20px;margin:0;font-weight:700;} h1 span{color:var(--green);}
+.subtitle{color:var(--dim);font-size:12px;margin-top:4px;max-width:560px;line-height:1.5;}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);}
+.dot.live{background:var(--green);box-shadow:0 0 8px var(--green);}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.seg button{background:var(--panel);color:var(--dim);border:none;font-family:var(--mono);font-size:12px;padding:9px 14px;cursor:pointer;border-right:1px solid var(--line);}
+.seg button:last-child{border-right:none;} .seg button.active{background:var(--green-dim);color:#eafff2;}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:12px;padding:9px 16px;border-radius:6px;cursor:pointer;}
+.btn.primary{background:var(--green-dim);border-color:var(--green-dim);color:#eafff2;}
+.speedwrap{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:11px;margin-left:auto;}
+input[type=range]{accent-color:var(--green);width:110px;}
+.grid{display:grid;grid-template-columns:1fr 300px;gap:16px;}
+@media (max-width:880px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;}
+.panel h2{font-size:11px;letter-spacing:.1em;color:var(--dim);margin:0 0 10px;font-weight:600;}
+canvas{width:100%;display:block;border-radius:4px;background:#020402;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--dim);}
+.legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:10px 12px;}
+.metric .lbl{font-size:10px;color:var(--dim);} .metric .val{font-size:20px;font-weight:700;color:var(--green);margin-top:4px;}
+.metric .sub{font-size:10px;color:var(--dim2);margin-top:2px;}
+.emlist{display:flex;flex-direction:column;gap:6px;}
+.em{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px 8px;border-radius:5px;background:var(--panel2);border:1px solid transparent;}
+.em.on{border-color:var(--green-dim);}
+.em .flag{width:7px;height:7px;border-radius:50%;background:var(--dim2);} .em.on .flag{background:var(--green);box-shadow:0 0 6px var(--green);}
+.log{height:110px;overflow-y:auto;font-size:10.5px;color:var(--dim);line-height:1.7;border-top:1px solid var(--line);margin-top:10px;padding-top:8px;}
+.log div span{color:var(--green);} .log div.miss span{color:var(--dim2);} .log div.fa span{color:var(--amber);}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div style="font-size:11px;letter-spacing:.14em;color:var(--dim);margin-bottom:4px;">FASTAPI · WEBSOCKET LIVE FEED</div>
+    <h1>ES Scheduler Console — <span>Smart Scan</span> (backend-driven)</h1>
+    <div class="subtitle">Same dashboard, now fed by main.py over ws://localhost:8000/ws. Scheduler logic (LinUCB bandit) runs server-side.</div>
+  </div>
+  <div class="status"><div class="dot" id="liveDot"></div><span id="statusTxt">connecting…</span></div>
+</header>
+
+<div class="controls">
+  <div class="seg">
+    <button id="modeOpen" class="active">Open-loop sweep</button>
+    <button id="modeSmart">LinUCB bandit</button>
+  </div>
+  <button class="btn primary" id="playBtn">Start</button>
+  <button class="btn" id="resetBtn">Reset</button>
+  <div class="speedwrap">dwell/step <input type="range" id="speed" min="40" max="400" value="140"><span id="speedVal">140ms</span></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>SPECTRUM WATERFALL</h2>
+    <canvas id="wf"></canvas>
+    <div class="legend">
+      <span><i class="sw" style="background:#233126"></i>idle</span>
+      <span><i class="sw" style="background:#5a4a28"></i>active, unwatched</span>
+      <span><i class="sw" style="background:var(--cyan)"></i>dwell</span>
+      <span><i class="sw" style="background:var(--green)"></i>intercept</span>
+      <span><i class="sw" style="background:var(--amber)"></i>false alarm</span>
+    </div>
+  </div>
+  <div>
+    <div class="panel" style="margin-bottom:14px;">
+      <h2>FIGURES OF MERIT</h2>
+      <div class="metrics">
+        <div class="metric"><div class="lbl">P_int</div><div class="val" id="mPint">0.0%</div><div class="sub" id="mPintSub">0 / 0</div></div>
+        <div class="metric"><div class="lbl">TTFI</div><div class="val" id="mTtfi">—</div><div class="sub">steps to detect</div></div>
+        <div class="metric"><div class="lbl">IRE</div><div class="val" id="mIre">0.0%</div><div class="sub">ratio error</div></div>
+        <div class="metric"><div class="lbl">n_duty</div><div class="val" id="mDuty">—%</div><div class="sub" id="mDutySub"></div></div>
+        <div class="metric"><div class="lbl">P_fa — false alarm</div><div class="val" id="mPfa">0.0%</div><div class="sub" id="mPfaSub">0 false / 0 watches</div></div>
+        <div class="metric"><div class="lbl">Avg reward/step</div><div class="val" id="mReward">0.00</div><div class="sub">hit −FA −switch cost</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>EMITTER TRUTH TABLE</h2>
+      <div class="emlist" id="emList"></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const NB=16, ROWS=90;
+let ws, grid=[], curMode='open';
+const wsUrl = (location.protocol==='https:'?'wss://':'ws://') + location.host + '/ws';
+
+function connect(){
+  ws = new WebSocket(wsUrl);
+  ws.onopen = ()=>{ document.getElementById('liveDot').classList.add('live'); document.getElementById('statusTxt').textContent='connected · idle'; };
+  ws.onclose = ()=>{ document.getElementById('liveDot').classList.remove('live'); document.getElementById('statusTxt').textContent='disconnected — retrying…'; setTimeout(connect, 1500); };
+  ws.onmessage = (evt)=> handleMsg(JSON.parse(evt.data));
+}
+connect();
+
+function send(obj){ if(ws.readyState===1) ws.send(JSON.stringify(obj)); }
+
+function handleMsg(m){
+  grid.push({active:m.active, watch:m.band_watch, hit:m.hit, fa:m.false_alarm});
+  if(grid.length>ROWS) grid.shift();
+  document.getElementById('statusTxt').textContent=`${m.mode==='open'?'open-loop':'bandit'} · step ${m.step}`;
+  const mt=m.metrics;
+  document.getElementById('mPint').textContent=(mt.p_int*100).toFixed(1)+'%';
+  document.getElementById('mPintSub').textContent=`${mt.hits} / ${mt.total_pulses} pulses`;
+  document.getElementById('mTtfi').textContent = mt.ttfi!==null ? mt.ttfi.toFixed(2)+' st' : '—';
+  document.getElementById('mIre').textContent=(mt.ire*100).toFixed(1)+'%';
+  document.getElementById('mDuty').textContent=(mt.n_duty*100).toFixed(1)+'%';
+  document.getElementById('mPfa').textContent=(mt.pfa*100).toFixed(1)+'%';
+  document.getElementById('mPfaSub').textContent=`${mt.false_alarms} false triggers`;
+  document.getElementById('mReward').textContent=mt.avg_reward.toFixed(3);
+
+  const el=document.getElementById('emList'); el.innerHTML='';
+  m.emitters.forEach(em=>{
+    const row=document.createElement('div'); row.className='em'+(em.on?' on':'');
+    row.innerHTML=`<span class="flag"></span><span style="flex:1;margin-left:6px;">${em.name}</span><span style="color:var(--dim);font-size:10px;">band ${em.band} · ${em.type}</span>`;
+    el.appendChild(row);
+  });
+
+  const log=document.getElementById('log');
+  const d=document.createElement('div');
+  if(m.hit){ d.innerHTML=`t${m.step} · band ${m.band_watch} <span>INTERCEPT</span>`; }
+  else if(m.false_alarm){ d.className='fa'; d.innerHTML=`t${m.step} · band ${m.band_watch} <span>FALSE ALARM</span>`; }
+  else { d.className='miss'; d.innerHTML=`t${m.step} · band ${m.band_watch} watched, no signal`; }
+  log.prepend(d); while(log.children.length>40) log.removeChild(log.lastChild);
+
+  drawWaterfall();
+}
+
+function drawWaterfall(){
+  const canvas=document.getElementById('wf');
+  const cssW=canvas.parentElement.clientWidth, cssH=340, dpr=window.devicePixelRatio||1;
+  if(canvas.width!==Math.floor(cssW*dpr)){canvas.width=cssW*dpr;canvas.height=cssH*dpr;}
+  canvas.style.height=cssH+'px';
+  const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+  const cw=cssW/NB, ch=cssH/ROWS;
+  for(let r=0;r<grid.length;r++){
+    const row=grid[grid.length-1-r], y=r*ch;
+    for(let b=0;b<NB;b++){
+      let col='#131d17';
+      const isActive=row.active[b], isWatch=row.watch===b;
+      if(isWatch && row.hit) col='#33e07f';
+      else if(isWatch && row.fa) col='#ffb648';
+      else if(isWatch) col='#3fb8dd';
+      else if(isActive) col='#5a4a28';
+      ctx.fillStyle=col; ctx.fillRect(b*cw+1,y+1,cw-2,ch-2);
+    }
+  }
+}
+window.addEventListener('resize', drawWaterfall);
+
+document.getElementById('modeOpen').onclick=()=>{curMode='open';document.getElementById('modeOpen').classList.add('active');document.getElementById('modeSmart').classList.remove('active');send({type:'set_mode',mode:'open'});};
+document.getElementById('modeSmart').onclick=()=>{curMode='smart';document.getElementById('modeSmart').classList.add('active');document.getElementById('modeOpen').classList.remove('active');send({type:'set_mode',mode:'smart'});};
+document.getElementById('resetBtn').onclick=()=>{grid=[];send({type:'reset'});};
+document.getElementById('speed').oninput=(e)=>{document.getElementById('speedVal').textContent=e.target.value+'ms';send({type:'set_speed',ms:Number(e.target.value)});};
+let playing=false;
+document.getElementById('playBtn').onclick=()=>{
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'Pause':'Start';
+  send({type: playing?'play':'pause'});
+};
+</script>
+</body>
+</html>
