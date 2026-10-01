@@ -23,8 +23,7 @@ docker run -p 8000:8000 ew-console
 
 ## What's on the page
 
-**Final Results tab** (loads real data from `backend/data/`, produced by
-your offline training run):
+**Final Results tab** (loads real data from `backend/data/`, produced by offline training run):
 - Policy comparison table — DQN, DQN+DSP, sawtooth, uniform_random on
   TSRD: P_int, Pd, Pfa, TTFI, avg_reward, best policy highlighted.
 - P_int bar chart and the DQN training curve (parsed live from the
@@ -33,30 +32,8 @@ your offline training run):
   DSP hit rate, forced-exploration fraction, and the per-config list.
 
 **Live Scheduler Demo tab**: the interactive open-loop-sweep-vs-LinUCB-bandit
-console from the earlier prototype, for judges to try live. Kept because a
-working, prodable demo is a different kind of evidence than a results
-table — use whichever your judges respond to.
+console from the earlier prototype
 
-## Repo layout
-
-```
-backend/
-  app/
-    main.py            FastAPI app: REST + websocket + static mount
-    metrics_engine.py  figures-of-merit engine (P_int, TTFI, Pd, Pfa, IRE, n_duty, avg_reward)
-    results_loader.py  loads final_result.json + Monitor CSV -> JSON for the frontend
-    environment.py     simulated RF environment (live demo only)
-    scheduler.py        OpenLoopSweep / LinUCBScheduler / LSTMScheduler stub (live demo only)
-    ws_live.py           live demo websocket loop
-  data/
-    final_result.json   <- your offline training run's output, drop a new one here to update the dashboard
-    rl_results.csv
-    train_monitor.csv
-  requirements.txt
-frontend/
-  index.html            single-page tabbed dashboard, vanilla JS, no build step
-Dockerfile
-```
 
 ## Updating with a new training run
 
