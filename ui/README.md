@@ -1,6 +1,6 @@
 # EW Smart Scan — Evaluation Console
 
-SIH Task 06 deliverable: Evaluation Metrics Engine, System Integration &
+Evaluation Metrics Engine, System Integration &
 Real-Time GUI for the Smart Scan Strategy project. Presents the trained
 DQN scheduler's real results (on TSRD) alongside a live, interactive
 open-loop-vs-bandit demo, from one FastAPI backend and one page.
@@ -67,18 +67,6 @@ outputs (same schema: `final_result.json` needs `dataset`, `algo`,
 stable-baselines3 `Monitor` wrapper CSV). No code changes needed — restart
 the server and the dashboard reflects the new numbers.
 
-## Push to git
-
-```bash
-git init
-git add .
-git commit -m "EW smart scan evaluation console"
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-`.gitignore` already excludes `__pycache__/`, venvs, and `.env`. The
-`backend/data/` result files are real artifacts, not secrets — they're
-committed on purpose so a fresh clone works immediately.
 
 ## Notes on IRE and n_duty for offline (trained-model) rows
 
