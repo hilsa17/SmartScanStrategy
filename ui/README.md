@@ -51,11 +51,6 @@ wraps that into the same `tick()`/`context_matrix()` interface the
 scheduler already used, so no scheduler or metrics code had to change —
 only the data underneath it did.
 
-**The raw `.h5` files are NOT committed** (19 files, ~380MB total — over
-GitHub's comfort zone). Only the tiny precomputed cache is committed
-(`backend/data/cache/`, a few hundred KB), which is all the app needs to
-run. 
-
 ```bash
 mkdir -p backend/data/h5
 cp /path/to/your/config_*.h5 backend/data/h5/
