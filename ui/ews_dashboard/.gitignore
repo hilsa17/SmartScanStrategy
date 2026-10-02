@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+.env
+
+# raw TSRD .h5 captures are ~380MB total -- too large for git.
+# The precomputed busy-map cache (backend/data/cache/*.npz, a few hundred
+# KB) IS committed and is all the app needs to run. Drop raw .h5 files here
+# only if you want to regenerate that cache from scratch.
+backend/data/h5/*.h5
